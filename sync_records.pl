@@ -143,8 +143,7 @@ if ( $opt->fix && scalar @records_in_aspen_not_in_koha ) {
     my $i     = 1;
     #my $sql = q{ INSERT INTO zebraqueue ( id, biblio_auth_number, operation, server, done, time ) VALUES ( NULL, ?, 'recordDelete', 'biblioserver', 1, NOW() ) };
     my $sql = q{ INSERT INTO deletedbiblio ( biblionumber, title, datecreated  ) VALUES ( ?, "Fixing bad record in Aspen", NOW()  ) };
-    $sth = $koha_dbh->prepare(
-    );
+    $sth = $koha_dbh->prepare($sql);
     foreach my $id (@records_in_aspen_not_in_koha) {
         print "Inserting zebra queue update for record $id:  $i of $count\r";
         $sth->execute($id);
