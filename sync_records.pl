@@ -1,5 +1,7 @@
 #!/usr/bin/perl
 
+# To install deps on Debian, use the command: apt install -y libmodern-perl-perl libconfig-tiny-perl libarray-utils-perl libdbd-mysql-perl
+
 use Modern::Perl;
 
 use Config::Tiny;
