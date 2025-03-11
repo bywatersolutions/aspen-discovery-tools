@@ -1,7 +1,5 @@
 #!/usr/bin/perl
 
-# To install deps on Debian, use the command: apt install -y libmodern-perl-perl libconfig-tiny-perl libarray-utils-perl libdbd-mysql-perl
-
 use Modern::Perl;
 
 use Config::Tiny;
@@ -9,6 +7,7 @@ use DBI;
 use Data::Dumper;
 use Getopt::Long::Descriptive;
 use Array::Utils qw(array_minus);
+use Try::Tiny;
 
 my ( $opt, $usage ) = describe_options(
     '%c %o',
@@ -143,12 +142,22 @@ if ( $opt->fix && scalar @records_in_aspen_not_in_koha ) {
     say "Fixing records found in Aspen but not in Koha";
     my $count = scalar @records_in_aspen_not_in_koha;
     my $i     = 1;
-    #my $sql = q{ INSERT INTO zebraqueue ( id, biblio_auth_number, operation, server, done, time ) VALUES ( NULL, ?, 'recordDelete', 'biblioserver', 1, NOW() ) };
-    my $sql = q{ INSERT INTO deletedbiblio ( biblionumber, title, datecreated  ) VALUES ( ?, "Fixing bad record in Aspen", NOW()  ) };
+
+#my $sql = q{ INSERT INTO zebraqueue ( id, biblio_auth_number, operation, server, done, time ) VALUES ( NULL, ?, 'recordDelete', 'biblioserver', 1, NOW() ) };
+    my $sql =
+q{ INSERT INTO deletedbiblio ( biblionumber, title, datecreated  ) VALUES ( ?, "Fixing bad record in Aspen", NOW()  ) };
+    my $sql_update =
+      q{UPDATE deletedbiblio SET datecreated = NOW() WHERE biblionumber = ?};
     $sth = $koha_dbh->prepare($sql);
+    my $sth_update = $koha_dbh->prepare($sql_update);
     foreach my $id (@records_in_aspen_not_in_koha) {
         print "Inserting zebra queue update for record $id:  $i of $count\r";
-        $sth->execute($id);
+        try {
+            $sth->execute($id);
+        }
+        catch {
+            $sth_update->execute($id);
+        };
         $i++;
     }
 }
