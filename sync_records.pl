@@ -149,13 +149,11 @@ q{ INSERT INTO deletedbiblio ( biblionumber, title, datecreated  ) VALUES ( ?, "
       q{ UPDATE deletedbiblio SET datecreated = NOW() WHERE biblionumber = ? };
     my $sql_get_max_biblionumber =
       q{ SELECT MAX(biblionumber) FROM deletedbiblio };
-    my $sql_set_auto_increment = q{ ALTER TABLE biblio AUTO_INCREMENT = ? };
 
     $sth = $koha_dbh->prepare($sql);
     my $sth_update = $koha_dbh->prepare($sql_update);
     my $sth_get_max_biblionumber =
       $koha_dbh->prepare($sql_get_max_biblionumber);
-    my $sth_set_bib_autoinc = $koha_dbh->prepare($sql_set_auto_increment);
 
     my $counter = 0;
     foreach my $id (@records_in_aspen_not_in_koha) {
@@ -171,8 +169,8 @@ q{ INSERT INTO deletedbiblio ( biblionumber, title, datecreated  ) VALUES ( ?, "
 
         unless ( $counter % 100 ) {
             $sth_get_max_biblionumber->execute();
-            my ($max) = $sth_get_max_biblionumber->fetchrow_array();
-            $sth_set_bib_autoinc->execute( $max + 1 );
+            my ($max) = $sth_get_max_biblionumber->fetchrow_array() + 1;
+            $koha_dbh->do(qq{ ALTER TABLE biblio AUTO_INCREMENT = $max });
         }
     }
 }
