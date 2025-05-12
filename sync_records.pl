@@ -143,15 +143,20 @@ if ( $opt->fix && scalar @records_in_aspen_not_in_koha ) {
     my $count = scalar @records_in_aspen_not_in_koha;
     my $i     = 1;
 
-#my $sql = q{ INSERT INTO zebraqueue ( id, biblio_auth_number, operation, server, done, time ) VALUES ( NULL, ?, 'recordDelete', 'biblioserver', 1, NOW() ) };
-    my $sql =
-q{ INSERT INTO deletedbiblio ( biblionumber, title, datecreated  ) VALUES ( ?, "Fixing bad record in Aspen", NOW()  ) };
-    my $sql_update =
-      q{UPDATE deletedbiblio SET datecreated = NOW() WHERE biblionumber = ?};
+    my $sql = q{ INSERT INTO deletedbiblio ( biblionumber, title, datecreated  ) VALUES ( ?, "Fixing bad record in Aspen", NOW()  ) };
+    my $sql_update = q{ UPDATE deletedbiblio SET datecreated = NOW() WHERE biblionumber = ? };
+    my $sql_get_max_biblionumber = q{ SELECT MAX(biblionumber) FROM deletedbiblio };
+    my $sql_set_auto_increment = q{ ALTER TABLE biblio AUTOINCREMENT = ? };
+
     $sth = $koha_dbh->prepare($sql);
     my $sth_update = $koha_dbh->prepare($sql_update);
+    my $sth_get_max_biblionumber = $koha_dbh->prepare($sql_get_max_biblionumber);
+    my $sth_set_bib_autoinc = $koha_dbh->prepare($sql_set_auto_increment);
+
+    my $counter = 0;
     foreach my $id (@records_in_aspen_not_in_koha) {
         print "Inserting zebra queue update for record $id:  $i of $count\r";
+        $counter++;
         try {
             $sth->execute($id);
         }
@@ -159,5 +164,10 @@ q{ INSERT INTO deletedbiblio ( biblionumber, title, datecreated  ) VALUES ( ?, "
             $sth_update->execute($id);
         };
         $i++;
+
+        unless ( $counter % 100 ) {
+            my ( $max ) = $sth_get_max_biblionumber->fetchrow_array();
+            $sql_set_auto_increment->execute( $max );
+        }
     }
 }
